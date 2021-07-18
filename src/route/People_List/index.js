@@ -1,22 +1,380 @@
 import React from 'react';
-import {SafeAreaView, Text, FlatList} from 'react-native';
-import {observer} from 'mobx-react';
-import store from '../../mobx/store';
+import {
+  SafeAreaView,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  View,
+  ActivityIndicator,
+} from 'react-native';
+import Axios from 'axios';
+import {API_URL} from '../../constanst/API';
+import {Picker} from '../../component';
 
-@observer
+const APP_ID = '60f3df1759537c1837398a8c';
+const locationProvince = [
+  'Denmark',
+  'Netherlands',
+  'Brazil',
+  'Spain',
+  'Germany',
+];
+const locationDistrict = [
+  'Kongsvinger',
+  'Den Bommel',
+  'Recife',
+  'LogroÃ±o',
+  'GrÃ¼nhain-Beierfeld',
+];
+const lcoationSubDistrict = [
+  'Nordjylland',
+  'Gelderland',
+  'CearÃ¡',
+  'Islas Baleares',
+  'Sachsen-Anhalt',
+];
+const locationVillages = [
+  'SÃ¸ndermarksvej',
+  'Dilledonk-Zuid',
+  'Rua Carlos Gomes',
+  'Calle Mota',
+  'MÃ¼hlenweg',
+];
+const postalCode = ['9614', '1371', '8750', '7675', '1196'];
+
 class People_List extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      data: [],
+      isLoading: false,
+      selectedCity: 'Denmark',
+      selectedDistrict: 'Kongsvinger',
+      selectedSubDistrict: 'Nordjylland',
+      selectedVillage: 'SÃ¸ndermarksvej',
+      selectedPostal: '9614',
+      selectedData: [],
+    };
+  }
+
+  fetchDataPeople() {
+    this.setState({isLoading: true});
+    Axios.get(`${API_URL}/user?limit=5`, {
+      headers: {'app-id': APP_ID},
+    })
+      .then(response => {
+        this.setState({data: response.data.data});
+        this.setState({isLoading: false});
+      })
+      .catch(err => {
+        console.log(err);
+        this.setState({isLoading: false});
+      });
+  }
+
+  onSort() {
+    if (this.state.selectedData.length === 0) {
+      this.setState({
+        selectedData: this.state.selectedData.push(
+          this.state.selectedCity,
+          this.state.selectedDistrict,
+          this.state.selectedSubDistrict,
+          this.state.selectedVillage,
+          this.state.selectedPostal,
+        ),
+      });
+      if (this.state.selectedData.length) {
+        this.setState({
+          selectedData: [],
+        });
+      }
+    }
+
+    this.setState({isLoading: true});
+    this.state.data.map(item => {
+      Axios.get(`${API_URL}/user/${item.id}`, {
+        headers: {'app-id': APP_ID},
+      })
+        .then(response => {
+          this.setState({data: response.data.location});
+          // var tempData = [];
+          // for (var index = 0; index < this.state.data.length; index++) {
+          //   tempData.push(this.state.data);
+          // }
+          // this.setState({data: tempData});
+          this.setState({isLoading: false});
+        })
+        .catch(err => {
+          console.log(err);
+          this.setState({isLoading: false});
+        });
+    });
+
+    // const usersWithDetails = Promise.allSettled(fetchAllDetails);
+
+    const filterResult = this.state.data.filter(val => {
+      return val.city && val.state && val.country && val.street;
+    });
+
+    this.setState({data: filterResult});
+  }
+
   componentDidMount() {
-    store.fetchDataPeople();
+    this.fetchDataPeople();
+  }
+
+  titleCase(string) {
+    return string[0].toUpperCase() + string.slice(1).toLowerCase();
+  }
+
+  onValueChanged(value) {
+    this.setState({
+      selectedCity: value,
+    });
+  }
+
+  onValueChangedDistrict(value) {
+    this.setState({
+      selectedDistrict: value,
+    });
+  }
+
+  onValueChangedSubDistrict(value) {
+    this.setState({
+      selectedSubDistrict: value,
+    });
+  }
+
+  onValueChangedVillage(value) {
+    this.setState({
+      selectedVillage: value,
+    });
+  }
+
+  onValueChangedPostal(value) {
+    this.setState({selectedPostal: value});
+  }
+
+  renderPeopleList = item => {
+    return (
+      <>
+        <TouchableOpacity
+          style={{
+            flexDirection: 'column',
+            padding: 10,
+            backgroundColor: '#fff',
+            margin: 8,
+            borderRadius: 10,
+            shadowColor: '#ade6e6',
+            shadowOffset: {width: 5, height: 5},
+            shadowOpacity: 0.8,
+            shadowRadius: 3,
+            elevation: 5,
+          }}
+          onPress={() =>
+            this.props.navigation.navigate('Detail_People', {data: item})
+          }>
+          <View style={{flexDirection: 'row'}}>
+            <Image
+              source={{uri: item.picture}}
+              style={{width: 70, height: 70, borderRadius: 70 / 2}}
+            />
+            <View
+              style={{
+                flexDirection: 'column',
+                justifyContent: 'center',
+                marginLeft: 20,
+              }}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '500',
+                }}>
+                {this.titleCase(item.title)} {item.firstName} {item.lastName}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '500',
+                }}>
+                {item.email}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </>
+    );
+  };
+
+  renderSortLocation(item) {
+    return (
+      <TouchableOpacity
+        style={{
+          flexDirection: 'column',
+          padding: 10,
+          backgroundColor: '#fff',
+          margin: 8,
+          borderRadius: 10,
+          shadowColor: '#ade6e6',
+          shadowOffset: {width: 5, height: 5},
+          shadowOpacity: 0.8,
+          shadowRadius: 3,
+          elevation: 5,
+        }}>
+        <View style={{flexDirection: 'row'}}>
+          <View
+            style={{
+              flexDirection: 'column',
+              justifyContent: 'center',
+              marginLeft: 20,
+            }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '500',
+              }}>
+              {item.city}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   }
 
   render() {
     return (
-      <SafeAreaView>
-        <FlatList
-          data={store.data}
-          keyExtractor={item => item.id}
-          renderItem={({item}) => <Text>{item.firstName}</Text>}
-        />
+      <SafeAreaView style={{flex: 1, backgroundColor: '#d3c7e9'}}>
+        <View style={{flexDirection: 'column'}}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginHorizontal: 8,
+              marginVertical: 10,
+            }}>
+            <Text>Province</Text>
+            <Picker
+              placeholder={
+                this.state.selectedCity === ''
+                  ? 'Province'
+                  : this.state.selectedCity
+              }
+              title={'Select Province'}
+              data={locationProvince}
+              onSelected={(itemValue, itemIndex) =>
+                this.onValueChanged(itemValue)
+              }
+              selectedPicker={this.state.selectedCity}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginHorizontal: 8,
+            }}>
+            <Text>District</Text>
+            <Picker
+              placeholder={
+                this.state.selectedDistrict === ''
+                  ? 'District'
+                  : this.state.selectedDistrict
+              }
+              title={'Select District'}
+              data={locationDistrict}
+              onSelected={(itemValue, itemIndex) =>
+                this.onValueChangedDistrict(itemValue)
+              }
+              selectedPicker={this.state.selectedDistrict}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginHorizontal: 8,
+              marginVertical: 10,
+            }}>
+            <Text>Sub District</Text>
+            <Picker
+              placeholder={
+                this.state.selectedSubDistrict === ''
+                  ? 'Sub District'
+                  : this.state.selectedSubDistrict
+              }
+              title={'Select Sub District'}
+              data={lcoationSubDistrict}
+              onSelected={(itemValue, itemIndex) =>
+                this.onValueChangedSubDistrict(itemValue)
+              }
+              selectedPicker={this.state.selectedSubDistrict}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginHorizontal: 8,
+              marginVertical: 10,
+            }}>
+            <Text>Villages</Text>
+            <Picker
+              placeholder={
+                this.state.selectedVillage === ''
+                  ? 'Villages'
+                  : this.state.selectedVillage
+              }
+              title={'Select Villages'}
+              data={locationVillages}
+              onSelected={(itemValue, itemIndex) =>
+                this.onValueChangedVillage(itemValue)
+              }
+              selectedPicker={this.state.selectedVillage}
+            />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginHorizontal: 8,
+              marginVertical: 10,
+            }}>
+            <Text>Postal Code</Text>
+            <Picker
+              placeholder={
+                this.state.selectedPostal === ''
+                  ? 'Postal Code'
+                  : this.state.selectedPostal
+              }
+              title={'Select Postal Code'}
+              data={postalCode}
+              onSelected={(itemValue, itemIndex) =>
+                this.onValueChangedPostal(itemValue)
+              }
+              selectedPicker={this.state.selectedPostal}
+            />
+          </View>
+          <TouchableOpacity
+            style={{alignItems: 'flex-end', margin: 10}}
+            onPress={() => this.onSort()}>
+            <Text>Submit</Text>
+          </TouchableOpacity>
+        </View>
+        {!this.state.isLoading ? (
+          <FlatList
+            data={this.state.data}
+            keyExtractor={item => item.id}
+            renderItem={({item}) => this.renderPeopleList(item)}
+          />
+        ) : (
+          <ActivityIndicator color="#000" />
+        )}
       </SafeAreaView>
     );
   }
