@@ -92,7 +92,6 @@ class People_List extends React.Component {
     })
       .then(response => {
         this.setState({data: response.data.data});
-        this.setState({dataLocation: response.data.data});
         this.setState({isLoading: false});
       })
       .catch(err => {
@@ -102,25 +101,18 @@ class People_List extends React.Component {
   }
 
   onSort() {
-    if (this.state.selectedData.length === 0) {
-      this.setState({
-        selectedData: this.state.selectedData.push(
-          this.state.selectedCity,
-          this.state.selectedDistrict,
-          this.state.selectedSubDistrict,
-          this.state.selectedVillage,
-          this.state.selectedPostal,
-        ),
-      });
-      if (this.state.selectedData.length) {
-        this.setState({
-          selectedData: [],
-        });
-      }
-    }
+    this.setState({
+      selectedData: this.state.selectedData.push(
+        this.state.selectedCity,
+        this.state.selectedDistrict,
+        this.state.selectedSubDistrict,
+        this.state.selectedVillage,
+        this.state.selectedPostal,
+      ),
+    });
 
     this.setState({isLoading: true});
-    const tempData = [];
+    let tempData = [];
 
     this.state.data.map(item => {
       Axios.get(`${API_URL}/user/${item.id}`, {
@@ -135,6 +127,7 @@ class People_List extends React.Component {
           });
 
           this.setState({dataLocation: filterResult});
+          this.setState({selectedData: []});
           this.setState({isLoading: false});
         })
         .catch(err => {
@@ -143,7 +136,7 @@ class People_List extends React.Component {
         });
     });
 
-    console.log(this.state.data);
+    console.log(this.state.selectedData);
 
     // const usersWithDetails = Promise.allSettled(fetchAllDetails);
   }
@@ -398,11 +391,19 @@ class People_List extends React.Component {
           </TouchableOpacity>
         </View>
         {!this.state.isLoading ? (
-          <FlatList
-            data={this.state.dataLocation}
-            keyExtractor={item => item.id}
-            renderItem={({item}) => this.renderPeopleList(item)}
-          />
+          this.state.dataLocation.length ? (
+            <FlatList
+              data={this.state.dataLocation}
+              keyExtractor={item => item.id}
+              renderItem={({item}) => this.renderPeopleList(item)}
+            />
+          ) : (
+            <FlatList
+              data={this.state.data}
+              keyExtractor={item => item.id}
+              renderItem={({item}) => this.renderPeopleList(item)}
+            />
+          )
         ) : (
           <ActivityIndicator color="#000" />
         )}
