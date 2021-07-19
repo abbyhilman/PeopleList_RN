@@ -15,7 +15,7 @@ import {launchCamera} from 'react-native-image-picker';
 const Detail_People = ({route, navigation}) => {
   const {data} = route.params;
   const [detail, setDetail] = useState({});
-  const APP_ID = '60f2d817d529f966871fd6cf';
+  const APP_ID = '60f50c6c6353de5cb73e3a7d';
   const [location, setLocation] = useState({});
   const [photo, setPhoto] = useState('');
 
@@ -33,9 +33,16 @@ const Detail_People = ({route, navigation}) => {
 
   useEffect(() => {
     fetchDataDetail();
+    Geolocation.getCurrentPosition(
+      info => setLocation(info),
+      error =>
+        alert('Error', JSON.stringify(error), {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 1000,
+        }),
+    );
   }, []);
-
-  Geolocation.getCurrentPosition(info => setLocation(info));
 
   const addPhoto = () => {
     launchCamera(
@@ -50,15 +57,9 @@ const Detail_People = ({route, navigation}) => {
         if (response.didCancel || response.error) {
           alert('Anda tidak memilih photo');
         } else {
-          const source = {uri: response.uri};
-          const dataImage = {
-            uri: response.uri,
-            type: response.type,
-            name: response.fileName,
-          };
-
-          setPhoto(source);
-          console.log('dataImage = ', dataImage);
+          response.assets.map(item => {
+            setPhoto(item.uri);
+          });
         }
       },
     );
@@ -121,7 +122,7 @@ const Detail_People = ({route, navigation}) => {
           <View style={styles.borderPhoto}>
             {photo ? (
               <TouchableOpacity activeOpacity={0.5} onPress={addPhoto}>
-                <Image source={photo} style={styles.photoContainer} />
+                <Image source={{uri: photo}} style={styles.photoContainer} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity activeOpacity={0.5} onPress={addPhoto}>

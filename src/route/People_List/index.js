@@ -7,12 +7,14 @@ import {
   Image,
   View,
   ActivityIndicator,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import Axios from 'axios';
 import {API_URL} from '../../constanst/API';
 import {Picker} from '../../component';
 
-const APP_ID = '60f3df1759537c1837398a8c';
+const APP_ID = '60f50c6c6353de5cb73e3a7d';
 const locationProvince = [
   'Denmark',
   'Netherlands',
@@ -48,6 +50,7 @@ class People_List extends React.Component {
     super(props);
     this.state = {
       data: [],
+      dataLocation: [],
       isLoading: false,
       selectedCity: 'Denmark',
       selectedDistrict: 'Kongsvinger',
@@ -58,13 +61,38 @@ class People_List extends React.Component {
     };
   }
 
+  requestCameraPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Cool Photo App Camera Permission',
+          message:
+            'Cool Photo App needs access to your camera ' +
+            'so you can take awesome pictures.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('You can use the camera');
+      } else {
+        console.log('Camera permission denied');
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   fetchDataPeople() {
     this.setState({isLoading: true});
-    Axios.get(`${API_URL}/user?limit=5`, {
+    Axios.get(`${API_URL}/user?limit=10`, {
       headers: {'app-id': APP_ID},
     })
       .then(response => {
         this.setState({data: response.data.data});
+        this.setState({dataLocation: response.data.data});
         this.setState({isLoading: false});
       })
       .catch(err => {
@@ -92,17 +120,21 @@ class People_List extends React.Component {
     }
 
     this.setState({isLoading: true});
+    const tempData = [];
+
     this.state.data.map(item => {
       Axios.get(`${API_URL}/user/${item.id}`, {
         headers: {'app-id': APP_ID},
       })
         .then(response => {
-          this.setState({data: response.data.location});
-          // var tempData = [];
-          // for (var index = 0; index < this.state.data.length; index++) {
-          //   tempData.push(this.state.data);
-          // }
-          // this.setState({data: tempData});
+          tempData.push(response.data);
+          // console.log(tempData);
+          const filterResult = tempData.filter(val => {
+            const itemData = `${val.location.city} ${val.location.state} ${val.location.country} ${val.location.street}`;
+            return itemData.indexOf(this.state.selectedData) > -1;
+          });
+
+          this.setState({dataLocation: filterResult});
           this.setState({isLoading: false});
         })
         .catch(err => {
@@ -111,17 +143,16 @@ class People_List extends React.Component {
         });
     });
 
+    console.log(this.state.data);
+
     // const usersWithDetails = Promise.allSettled(fetchAllDetails);
-
-    const filterResult = this.state.data.filter(val => {
-      return val.city && val.state && val.country && val.street;
-    });
-
-    this.setState({data: filterResult});
   }
 
   componentDidMount() {
     this.fetchDataPeople();
+    if (Platform.OS === 'android') {
+      this.requestCameraPermission();
+    }
   }
 
   titleCase(string) {
@@ -368,7 +399,7 @@ class People_List extends React.Component {
         </View>
         {!this.state.isLoading ? (
           <FlatList
-            data={this.state.data}
+            data={this.state.dataLocation}
             keyExtractor={item => item.id}
             renderItem={({item}) => this.renderPeopleList(item)}
           />
